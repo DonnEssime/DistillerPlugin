@@ -1,9 +1,9 @@
 package haven.plugins;
 
 import haven.*;
-import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.List;
 
@@ -32,6 +32,7 @@ public class DistillerPlugin extends Plugin implements Runnable{
     public void run() {
         List<GItem> distiller_items;
         while(true){
+        System.out.println(""+state.toString());
         switch(state)
         {
             case START:
@@ -66,17 +67,17 @@ public class DistillerPlugin extends Plugin implements Runnable{
                 {
                     break;
                 }
-                places = countDehydratedItems(distiller_items);
+                places = countDehydratedItems(distiller_items)+(2-distiller_items.size());
                 if(places < 0)
                 {
                     break;
                 }
-                UI.instance.message("[Distillers] Replacing "+places+" items.", GameUI.MsgType.INFO);
+                UI.instance.message("[Distillers] Placing "+places+" items.", GameUI.MsgType.INFO);
                 takeDehydratedItems(distiller_items);
                 state = DistillerState.WAIT_DISTILLER_EMPTY;
             case WAIT_DISTILLER_EMPTY:
                 distiller_items = searchDistiller();
-                if(countDehydratedItems(distiller_items)!=0)
+                if(distiller_items == null || countDehydratedItems(distiller_items)!=0)
                 {
                     break;
                 }
@@ -84,7 +85,7 @@ public class DistillerPlugin extends Plugin implements Runnable{
                 state = DistillerState.WAIT_DISTILLER_FULL;
             case WAIT_DISTILLER_FULL:
                 distiller_items = searchDistiller();
-                if(distiller_items.size() != 2)
+                if(distiller_items==null || distiller_items.size() != 2)
                 {
                     break;
                 }
@@ -107,7 +108,11 @@ public class DistillerPlugin extends Plugin implements Runnable{
         for (Widget wdg = maininv.lchild; wdg != null && count < places; wdg = wdg.prev) {
             if (wdg.visible && wdg instanceof WItem) {
                 String thatname = ((WItem) wdg).item.resname();
-                if((thatname.contains("berr")||thatname.contains("redrose")) && !(thatname.contains("hydra")))
+                if((thatname.endsWith("blackberry") || 
+                    thatname.endsWith("crowberry") || 
+                    thatname.endsWith("huckleberry") || 
+                    thatname.endsWith("cranberry") || 
+                    thatname.endsWith("redrose")) && !(thatname.contains("hydra")))
                 {
                     ((WItem)wdg).item.wdgmsg("transfer", Coord.z);
                     count += 1;
@@ -150,6 +155,7 @@ public class DistillerPlugin extends Plugin implements Runnable{
     }
     
     List<GItem> searchDistiller(){
+        try{
         List<GItem> item_list = new ArrayList<>();
         boolean founddistiller = false;
         for(Widget w : UI.instance.widgets.values())
@@ -176,9 +182,15 @@ public class DistillerPlugin extends Plugin implements Runnable{
         {
             return null;
         }
+        }catch(ConcurrentModificationException cme)
+        {
+            //this is bound to happen sometimes
+            return null;
+        }
     }
     
     List<GItem> searchTable(){
+        try{
         //check for a table window somewhere
         List<GItem> distiller_list = new ArrayList<>();
         boolean foundtable = false;
@@ -206,6 +218,11 @@ public class DistillerPlugin extends Plugin implements Runnable{
         }
         else
         {
+            return null;
+        }
+        }catch(ConcurrentModificationException cme)
+        {
+            //this is bound to happen sometimes
             return null;
         }
     }
